@@ -103,9 +103,7 @@ func GetVideo(c echo.Context) error {
 		if err != nil {
 			return c.JSON(500, err)
 		}
-		for j := range videos {
-			rv = append(rv, videos[j])
-		}
+		rv = append(rv, videos...)
 	}
 	res := Response{
 		Here:    hv,
@@ -117,6 +115,7 @@ func GetVideo(c echo.Context) error {
 }
 
 func getFacility(longitude string, latitude string) (string, []string, error) {
+
 	related := []string{"disney", "usj"}
 	return "colony", related, nil
 }
