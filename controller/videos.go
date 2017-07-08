@@ -1,12 +1,14 @@
 package controller
 
 import (
+	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/k0kubun/pp"
 	"github.com/kkimu/blaze-go-app/model"
 	"github.com/labstack/echo"
 )
@@ -15,16 +17,27 @@ const (
 	BASE_URL = "http://localhost:8000/static/"
 )
 
+type Response struct {
+	Here    []model.Video
+	Related []model.Video
+}
+
 func PostVideo(c echo.Context) error {
 	lon := c.FormValue("longitude")
 	lat := c.FormValue("latitude")
 
+	here, _, err := getFacility(lon, lat)
+	if err != nil {
+		return c.JSON(500, err)
+	}
+
 	video := model.Video{
 		Longitude: lon,
 		Latitude:  lat,
+		Facility:  here,
 	}
-	err := model.InsertVideo(&video)
-	if err != nil {
+
+	if err := model.InsertVideo(&video); err != nil {
 		return c.JSON(500, err)
 	}
 	file, err := c.FormFile("video")
@@ -68,4 +81,42 @@ func saveVideo(file *multipart.FileHeader, fname string) error {
 		return err
 	}
 	return nil
+}
+
+func GetVideo(c echo.Context) error {
+	lon := c.FormValue("longitude")
+	lat := c.FormValue("latitude")
+
+	here, related, err := getFacility(lon, lat)
+	if err != nil {
+		return c.JSON(500, err)
+	}
+
+	hv, err := model.GetVideos(here)
+	if err != nil {
+		return c.JSON(500, err)
+	}
+	fmt.Println("hv:", hv)
+	rv := []model.Video{}
+	for i := range related {
+		videos, err := model.GetVideos(related[i])
+		if err != nil {
+			return c.JSON(500, err)
+		}
+		for j := range videos {
+			rv = append(rv, videos[j])
+		}
+	}
+	res := Response{
+		Here:    hv,
+		Related: rv,
+	}
+	pp.Println(res)
+
+	return c.JSON(200, res)
+}
+
+func getFacility(longitude string, latitude string) (string, []string, error) {
+	related := []string{"disney", "usj"}
+	return "colony", related, nil
 }

@@ -27,6 +27,7 @@ func init() {
 		panic("failed to connect database")
 	}
 
-	db.DB()
 	db.AutoMigrate(&Video{})
+	db.DB()
+	//db.AutoMigrate(&Video{})
 }

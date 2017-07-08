@@ -22,6 +22,6 @@ func main() {
 	})
 
 	e.POST("/videos", controller.PostVideo)
-
+	e.GET("/videos", controller.GetVideo)
 	e.Logger.Fatal(e.Start(":8000"))
 }

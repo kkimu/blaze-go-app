@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Video struct {
 	ID        int       `json:"id"`
@@ -20,4 +23,15 @@ func InsertVideo(video *Video) error {
 
 func UpdateVideo(video *Video) error {
 	return db.Save(&video).Error
+}
+
+func GetVideos(facility string) ([]Video, error) {
+	var videos []Video
+	fmt.Println("facility:", facility)
+
+	if err := db.Where("facility = ? ", facility).Find(&videos).Error; err != nil {
+		return nil, err
+	}
+	fmt.Println("result:", videos)
+	return videos, nil
 }
