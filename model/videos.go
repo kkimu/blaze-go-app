@@ -1,17 +1,15 @@
 package model
 
-import (
-	"fmt"
-	"time"
-)
+import "time"
 
 type Video struct {
-	ID        int       `json:"id"`
-	URL       string    `json:"url"`
-	Longitude string    `json:"longitude"`
-	Latitude  string    `json:"latitude"`
-	Facility  string    `json:"facility"`
-	CreatedAt time.Time `json:"created_at"`
+	ID           int       `json:"id"`
+	URL          string    `json:"url"`
+	ThumbnailURL string    `json:"thumbnail_url"`
+	Longitude    string    `json:"longitude"`
+	Latitude     string    `json:"latitude"`
+	Facility     string    `json:"facility"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 func InsertVideo(video *Video) error {
@@ -27,11 +25,9 @@ func UpdateVideo(video *Video) error {
 
 func GetVideos(facility string) ([]Video, error) {
 	var videos []Video
-	fmt.Println("facility:", facility)
 
 	if err := db.Where("facility = ? ", facility).Find(&videos).Error; err != nil {
 		return nil, err
 	}
-	fmt.Println("result:", videos)
 	return videos, nil
 }

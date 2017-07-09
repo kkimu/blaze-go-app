@@ -2,15 +2,17 @@ package controller
 
 import (
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"mime/multipart"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/k0kubun/pp"
 	"github.com/kkimu/blaze-go-app/model"
 	"github.com/labstack/echo"
+	"github.com/opennota/screengen"
 )
 
 const (
@@ -46,15 +48,54 @@ func PostVideo(c echo.Context) error {
 	}
 	a := strings.Split(file.Filename, ".")
 	fname := strconv.Itoa(video.ID) + "." + a[len(a)-1]
+	tfname := strconv.Itoa(video.ID) + "_thumbnail.jpg"
 	if err := saveVideo(file, fname); err != nil {
 		return c.JSON(500, err)
 	}
+	go func() {
+		img, err := generateThumbnail("/static/" + fname)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if err := saveImage(img, tfname); err != nil {
+			fmt.Println(err)
+			return
+		}
+	}()
 
 	video.URL = BASE_URL + fname
+	video.ThumbnailURL = BASE_URL + tfname
 	if err := model.UpdateVideo(&video); err != nil {
 		return c.JSON(500, err)
 	}
 	return c.JSON(200, video)
+}
+
+func generateThumbnail(fn string) (image.Image, error) {
+	generator, err := screengen.NewGenerator(fn)
+	if err != nil {
+		return nil, err
+	}
+	img, err := generator.Image(1000)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+func saveImage(img image.Image, fname string) error {
+	dst, err := os.Create("/static/" + fname)
+	if err != nil {
+		return err
+	}
+
+	option := &jpeg.Options{Quality: 100}
+
+	if err = jpeg.Encode(dst, img, option); err != nil {
+		return err
+	}
+	return nil
 }
 
 func saveVideo(file *multipart.FileHeader, fname string) error {
@@ -96,7 +137,6 @@ func GetVideo(c echo.Context) error {
 	if err != nil {
 		return c.JSON(500, err)
 	}
-	fmt.Println("hv:", hv)
 	rv := []model.Video{}
 	for i := range related {
 		videos, err := model.GetVideos(related[i])
@@ -105,11 +145,11 @@ func GetVideo(c echo.Context) error {
 		}
 		rv = append(rv, videos...)
 	}
+
 	res := Response{
 		Here:    hv,
 		Related: rv,
 	}
-	pp.Println(res)
 
 	return c.JSON(200, res)
 }
