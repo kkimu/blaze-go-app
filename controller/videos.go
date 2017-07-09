@@ -1,11 +1,15 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -22,6 +26,15 @@ const (
 type Response struct {
 	Here    []model.Video
 	Related []model.Video
+}
+
+type GetPlaceResponse struct {
+	HitPlace      string         `json:"hit_place"`
+	SuggestPlaces []SuggestPlace `json:"suggest_places"`
+}
+type SuggestPlace struct {
+	PlaceName     string `json:"place_name"`
+	SuggestReason string `json:"suggest_reason"`
 }
 
 func PostVideo(c echo.Context) error {
@@ -155,7 +168,27 @@ func GetVideo(c echo.Context) error {
 }
 
 func getFacility(longitude string, latitude string) (string, []string, error) {
+	values := url.Values{}
+	values.Add("lng", longitude)
+	values.Add("lat", latitude)
+	resp, err := http.Get("http://async-server" + "?" + values.Encode())
+	if err != nil {
+		return "", nil, err
+	}
 
-	related := []string{"disney", "usj"}
-	return "colony", related, nil
+	// 関数を抜ける際に必ずresponseをcloseするようにdeferでcloseを呼ぶ
+	defer resp.Body.Close()
+	content, _ := ioutil.ReadAll(resp.Body)
+
+	var res GetPlaceResponse
+	err = json.Unmarshal(content, res)
+	if err != nil {
+		return "", nil, err
+	}
+
+	var related []string
+	for i := range res.SuggestPlaces {
+		related = append(related, res.SuggestPlaces[i].PlaceName)
+	}
+	return res.HitPlace, related, nil
 }
